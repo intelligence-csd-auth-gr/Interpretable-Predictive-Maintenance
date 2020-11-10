@@ -60,7 +60,31 @@ class LioNet:
 
         local_prediction = linear_model.predict([neighbourhood[-1]])[0]
         return weights, instance_prediction, local_prediction
+    
+    def give_me_the_neighbourhood(self, new_instance, max_neighbours=None, model=None, random_state=0):
+        """Generates the explanation for an instance
+        Args:
+            new_instance: The instance to explain
+            max_neighbours:
+            model:
+            random_state: 
+        Return:
+            weights: 
+            instance_prediction: 
+            local_prediction:
+        """
 
+        neighbourhood, predictions, distances = self._get_decoded_neighbourhood(new_instance, max_neighbours, random_state)
+
+        instance_prediction = predictions[-1]
+
+        #if not 1D representation reshape
+        if len(new_instance.shape) == 2: #only for 1 or 2 dimension
+            one_dimension_size = new_instance.shape[0] * new_instance.shape[1]
+            neighbourhood = neighbourhood.reshape((len(neighbourhood),one_dimension_size))
+    
+        return neighbourhood, predictions
+    
     def _get_decoded_neighbourhood(self, instance, max_neighbours=None, random_state=0):
         """Returns
         """
