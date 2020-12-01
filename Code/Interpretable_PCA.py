@@ -19,7 +19,6 @@ class iPCA:
     def find_importance(self, instance):
 
         # Create instance neighbourhood
-        #lionet.give_me_the_neighbourhood(
         neighbourhood, predictions = self.neighbours_generator(instance,self.n_neighbours)
         neighbourhood = neighbourhood.reshape(-1,50,14)
 
@@ -46,7 +45,6 @@ class iPCA:
         rr.fit(scaled_data,predictions)
 
         # Extract the importance(weight) of each sensor for the given instance (last element of the neighbourhood)
-        #sensor_weights = scaled_data[-1] * rr.coef_
         sensor_weights = rr.coef_
         sensor_weights = np.array(sensor_weights)
         
