@@ -43,6 +43,9 @@ class iPCA:
         # Train a Ridge Regression model with the transformed data
         rr = Ridge(random_state=0)
         rr.fit(scaled_data,predictions)
+        
+        # Obtaining the local prediction for the instance
+        local_prediction = rr.predict(scaled_data[-1].reshape(1,-1))
 
         # Extract the importance(weight) of each sensor for the given instance (last element of the neighbourhood)
         sensor_weights = rr.coef_
@@ -54,4 +57,4 @@ class iPCA:
             timestep_weights.append(pca.components_[0])
         timestep_weights = np.array(timestep_weights).T
         
-        return sensor_weights, timestep_weights
+        return sensor_weights, timestep_weights, local_prediction
