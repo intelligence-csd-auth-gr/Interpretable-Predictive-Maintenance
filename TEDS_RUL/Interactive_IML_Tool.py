@@ -61,9 +61,9 @@ class interactive_iml_tool:
             self.recommendation[method] = self.recommend_modifications(method)  # Lionets & IPCA 
         
         self.seeSens = 1
-        self.header = " " 
+        self.original_preds, self.original_sens_all, self.original_sens_stats = [],[],[]
         self.mod_preds, self.mod_sens_all, self.mod_sens_stats = [],[],[]
-        self.main_preds, self.main_sens_all, self.main_sens_stats = [],[],[]
+        self.expected_preds, self.expected_sens_all, self.expected_sens_stats = [],[],[]
         self.load_UI()
     
     def modify(self, weights, sens, mod, uni_mod_val=0, uni_wght_sign=1, select_rul=0, xyz7_tm=0, forecast_option=6, mod_range=(1,50)):
@@ -110,7 +110,8 @@ class interactive_iml_tool:
             mod_instance = mod_instance[5:]
         elif mod == 9: # XYZ7 Forecaster
             mod_instance = mod_instance[xyz7_tm*5:45+xyz7_tm*5]
-            prediction = self.xyz7_model.predict([np.expand_dims(mod_instance,axis=0),np.array([select_rul])])
+            prediction = self.xyz7_model.predict([np.expand_dims(mod_instance,axis=0), 
+                                                  np.array(self.target_scaler.transform([[select_rul]]))])
             prediction = prediction.squeeze()
             mod_instance = np.append(mod_instance,prediction,axis=0)
 
@@ -243,19 +244,20 @@ class interactive_iml_tool:
             inst_mod = self.modify(self.weights_dict[iml_method][0], mod_sens_i-1, mod, uni_sldr, rd_btn_uni,
                               select_rul, rd_btn_xyz7, forecast_optns, rng_sldr)
             self.mod_preds, self.mod_sens_all, self.mod_sens_stats = self.moded_instance_statistics(inst_mod, iml_method)
+            self.original_preds, self.original_sens_all, self.original_sens_stats = self.original_instance_statistics[iml_method]
             if mod==9 and rd_btn_xyz7:
                 inst_mod = self.modify(self.weights_dict[iml_method][0], mod_sens_i-1, forecast_optns)
-                self.main_preds, self.main_sens_all, self.main_sens_stats = self.moded_instance_statistics(inst_mod, iml_method)
-                self.header = 'EXPECTED'
-            else:
-                self.main_preds, self.main_sens_all, self.main_sens_stats = self.original_instance_statistics[iml_method]
-                self.header = 'ORIGINAL'
+                self.expected_preds, self.expected_sens_all, self.expected_sens_stats = \
+                self.moded_instance_statistics(inst_mod, iml_method)              
         else:
             self.seeSens = sens_i
 
         # Print the predictions of RUL for the original and modified instance
-        print(self.header+" -> Real prediction: " + str(self.target_scaler.inverse_transform([[self.main_preds[0]]]).squeeze())[:7] + \
-              ", Local prediction: " + str(self.target_scaler.inverse_transform([[self.main_preds[1]]]).squeeze())[:7])
+        print("ORIGINAL -> Real prediction: " + str(self.target_scaler.inverse_transform([[self.original_preds[0]]]).squeeze())[:7] + \
+              ", Local prediction: " + str(self.target_scaler.inverse_transform([[self.original_preds[1]]]).squeeze())[:7])
+        if mod==9 and rd_btn_xyz7:
+            print("EXPECTED -> Real prediction: " + str(self.target_scaler.inverse_transform([[self.expected_preds[0]]]).squeeze())[:7] + \
+                  ", Local prediction: " + str(self.target_scaler.inverse_transform([[self.expected_preds[1]]]).squeeze())[:7])
         print("  MOD    -> Real prediction: " + str(self.target_scaler.inverse_transform([[self.mod_preds[0]]]).squeeze())[:7] + \
               ", Local prediction: " + str(self.target_scaler.inverse_transform([[self.mod_preds[1]]]).squeeze())[:7])
         
@@ -263,48 +265,57 @@ class interactive_iml_tool:
         # Plotting the figures 
         to_vis = [i[2:] for i in self.sensors]
         x = np.arange(len(to_vis))
-        width = 0.4
+        width = 0.3 if mod==9 and rd_btn_xyz7 else 0.4
             
         if iml_method == 'LioNets':
             fig, axs = plt.subplots(1, 3, figsize=(18, 4), dpi=200)
-            axs[0].bar(x-width, self.main_sens_stats[0], width=width, tick_label=to_vis, align='edge', color='C0')
+            axs[0].bar(x-width, self.original_sens_stats[0], width=width, tick_label=to_vis, align='edge', color='C0')
             axs[0].bar(x, self.mod_sens_stats[0], width=width, tick_label=to_vis, align='edge', color='C1')
             axs[0].set_title('Mean')
             axs[0].legend(('Οriginal','Modded'))
-            axs[1].bar(x-width, self.main_sens_stats[1], width=width, tick_label=to_vis, align='edge', color='C0')
+            axs[1].bar(x-width, self.original_sens_stats[1], width=width, tick_label=to_vis, align='edge', color='C0')
             axs[1].bar(x, self.mod_sens_stats[1], width=width, tick_label=to_vis, align='edge', color='C1')
             axs[1].set_title('STD')
-            axs[2].bar(x-width, self.main_sens_stats[2], width=width, tick_label=to_vis, align='edge', color='C0',)
-            axs[2].bar(x-width, self.main_sens_stats[3], width=width, tick_label=to_vis, align='edge', color='C0')
+            axs[2].bar(x-width, self.original_sens_stats[2], width=width, tick_label=to_vis, align='edge', color='C0',)
+            axs[2].bar(x-width, self.original_sens_stats[3], width=width, tick_label=to_vis, align='edge', color='C0')
             axs[2].bar(x, self.mod_sens_stats[2], width=width, tick_label=to_vis, align='edge', color='C1')
             axs[2].bar(x, self.mod_sens_stats[3], width=width, tick_label=to_vis, align='edge', color='C1')
-            axs[2].set_title('Max and Min')  
+            axs[2].set_title('Max and Min')
+            if mod==9 and rd_btn_xyz7:
+                axs[0].bar(x+width, self.expected_sens_stats[0], width=width, tick_label=to_vis, align='edge', color='C2')
+                axs[1].bar(x+width, self.expected_sens_stats[1], width=width, tick_label=to_vis, align='edge', color='C2')
+                axs[2].bar(x+width, self.expected_sens_stats[2], width=width, tick_label=to_vis, align='edge', color='C2')
+                axs[0].legend = (('Οriginal','Modded','Expected'))
             plt.show()
             
         else:
             fig, axs  = plt.subplots(1,3,figsize=(18, 4))
-            axs[1].bar(x-width, self.main_sens_stats, width=width, tick_label=to_vis, align='edge', color='C0')
+            axs[1].bar(x-width, self.original_sens_stats, width=width, tick_label=to_vis, align='edge', color='C0')
             axs[1].bar(x, self.mod_sens_stats, width=width, tick_label=to_vis, align='edge', color='C1')
             axs[1].set_title('Sensor Importance ')
             axs[1].legend(('Οriginal','Modded'))
+            if mod==9 and rd_btn_xyz7:
+                axs[1].bar(x+width, self.expected_sens_stats, width=width, tick_label=to_vis, align='edge', color='C2')
+                axs[1].legend(('Οriginal','Modded','Expected'))
             axs[0].axis('off')
             axs[2].axis('off')
             
 
+        main_sens_all = self.expected_sens_all if mod==9 and rd_btn_xyz7 else self.original_sens_all
         TIMESTEPS = np.arange(self.instance.shape[0])        
         plt.figure(figsize=(16, 4), dpi=200, facecolor='w', edgecolor='k')
         plt.subplot(131)
-        plt.plot(TIMESTEPS,np.array(self.main_sens_all[self.sensors[sens_i-1]])[:,1],color='grey',linestyle = ':')
+        plt.plot(TIMESTEPS,np.array(main_sens_all[self.sensors[sens_i-1]])[:,1],color='grey',linestyle = ':')
         plt.plot(TIMESTEPS,np.array(self.mod_sens_all[self.sensors[sens_i-1]])[:,1],color='tab:blue')
         plt.hlines(y=np.array(self.mod_sens_all[self.sensors[sens_i-1]])[:,1].mean(), xmin=0, xmax=50, label='mean')
         plt.title(str("Sensor\'s " + self.sensors[sens_i-1] + " influence"))
         plt.subplot(132)
-        plt.plot(TIMESTEPS,np.array(self.main_sens_all[self.sensors[sens_i-1]])[:,2],color='grey',linestyle = ':')
+        plt.plot(TIMESTEPS,np.array(main_sens_all[self.sensors[sens_i-1]])[:,2],color='grey',linestyle = ':')
         plt.plot(TIMESTEPS,np.array(self.mod_sens_all[self.sensors[sens_i-1]])[:,2],color='g')
         plt.hlines(y=np.array(self.mod_sens_all[self.sensors[sens_i-1]])[:,2].mean(), xmin=0, xmax=50, label='mean')
         plt.title(str("Sensor\'s " + self.sensors[sens_i-1] + " value"))
         plt.subplot(133)
-        plt.plot(TIMESTEPS,np.array(self.main_sens_all[self.sensors[sens_i-1]])[:,3],color='grey',linestyle = ':')
+        plt.plot(TIMESTEPS,np.array(main_sens_all[self.sensors[sens_i-1]])[:,3],color='grey',linestyle = ':')
         plt.plot(TIMESTEPS,np.array(self.mod_sens_all[self.sensors[sens_i-1]])[:,3],color='r')
         plt.hlines(y=np.array(self.mod_sens_all[self.sensors[sens_i-1]])[:,3].mean(), xmin=0, xmax=50, label='mean')
         plt.title(str("Sensor\'s " + self.sensors[sens_i-1] + " influence * value"))
@@ -319,7 +330,7 @@ class interactive_iml_tool:
         self.modify_sens_i = IntSlider(min=1, max=14, default_value=2, description="Mod Sensor: ", continuous_update = False)
         uniform_slider = FloatSlider(value=0, min=-1, max=1, step=0.05, description='Value:', continuous_update = False)
         radio_button_uni = RadioButtons(options=[('Positive Weights', 1), ('Negative Weights', -1)], description='Affect:')
-        select_rul = BoundedFloatText(value=0.5, min=0, max=1, step=0.001, description='Desired RUL:')
+        select_rul = BoundedFloatText(value=156, min=0, max=312, step=1, description='Desired RUL:')
         radio_button_xyz7 = RadioButtons(options=[('Present (5-last values)', 0), ('Future (5-next values)', 1)], description='Affect:')
         iml_method = ToggleButtons(options=['LioNets', 'Interpretable PCA'])
         self.forecast = Dropdown(options=[('Neural', 6), ('Static', 7),('N-Beats', 8)], description="Forecast: ")
