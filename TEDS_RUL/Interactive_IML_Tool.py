@@ -26,7 +26,7 @@ class interactive_iml_tool:
         """
         self.lionet = iml_methods['LioNets']
         self.lime = LimeTabularExplainer(training_data=data.reshape(len(data),-1), 
-                                         discretize_continuous=False, mode="regression")
+                                         discretize_continuous=False, mode="regression",random_state=0)
         self.ipca = {}
         self.ipca['LioNets'] = iPCA(self.lionet.give_me_the_neighbourhood, 'local')
         self.ipca['Lime'] = iPCA(self.lime.give_me_the_neighbourhood, 'local', self._lime_predict)
