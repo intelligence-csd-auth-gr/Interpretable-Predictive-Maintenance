@@ -208,8 +208,8 @@ class interactive_iml_tool:
         #print("Class 0 important features:",features[cls0_ftr[0]], features[cls0_ftr[1]])
         #print("Class 1 important features:",features[cls1_ftr[0]], features[cls1_ftr[1]])
 
-        mods = ['Original', 'Uniform', 'Mean(Local)', 'Mean(Global)', 'Zeros', \
-                'Noise', 'Forecast (Neural)', 'Forecast (Static)', 'Forecast (N-Beats)']
+        mods = ['Original', 'Uniform', 'Mean(Local)', 'Mean(Global)', 'Zeros', 'Noise'] 
+#         'Forecast (Neural)', 'Forecast (Static)', 'Forecast (N-Beats)']
         wghts = ['Negative Weights', 'Positive Weights']
 
         cls0_mod_results = []
@@ -241,7 +241,6 @@ class interactive_iml_tool:
                 temp.append((mod_preds[0],ftr,mod))
             cls1_mod_results.append(min(temp))
 
-
         recommendation = "\t\t\t\t\t\t<<< Recommendations >>>\n\n"
         for e0,rec in enumerate(cls0_mod_results):
             if rec[2]==1:
@@ -267,7 +266,7 @@ class interactive_iml_tool:
         print(self.recommendation[iml_method][enable_ipca])
 
         # Disable/Enable UI elements
-        if mod>=2 and mod<=6:
+        if mod>=2 and mod<=5:
             self.mod_settings.children = ([self.opt2_settings])
             self.modify_ftr_i.disabled =  False
         elif mod==1:
@@ -283,10 +282,14 @@ class interactive_iml_tool:
 
         # If a UI element has been changed other than the Feature View proceed to the modification
         if self.seeFtr == ftr_i:
-            inst_mod = self.modify(self.weights_dict[iml_method][enable_ipca][0], mod_ftr_i-1, mod, rng_sldr, uni_sldr, rd_btn_uni,
-                              select_target, rd_btn_xyz7, forecast_optns)
-            self.mod_preds, self.mod_ftr_all, self.mod_ftr_stats = self.moded_instance_statistics(inst_mod, iml_method,enable_ipca)
-            self.original_preds, self.original_ftr_all, self.original_ftr_stats = self.original_instance_statistics[iml_method][enable_ipca]
+            if mod==0: 
+                self.mod_preds, self.mod_ftr_all, self.mod_ftr_stats = self.original_instance_statistics[iml_method][enable_ipca]
+                self.original_preds, self.original_ftr_all, self.original_ftr_stats = self.original_instance_statistics[iml_method][enable_ipca]
+            else:
+                inst_mod = self.modify(self.weights_dict[iml_method][enable_ipca][0], mod_ftr_i-1, mod, rng_sldr, uni_sldr, rd_btn_uni,
+                                  select_target, rd_btn_xyz7, forecast_optns)
+                self.mod_preds, self.mod_ftr_all, self.mod_ftr_stats = self.moded_instance_statistics(inst_mod, iml_method,enable_ipca)
+                self.original_preds, self.original_ftr_all, self.original_ftr_stats = self.original_instance_statistics[iml_method][enable_ipca]
             if mod==9 and rd_btn_xyz7:
                 inst_mod = self.modify(self.weights_dict[iml_method][enable_ipca][0], mod_ftr_i-1, forecast_optns, rng_sldr)
                 self.expected_preds, self.expected_ftr_all, self.expected_ftr_stats = \
