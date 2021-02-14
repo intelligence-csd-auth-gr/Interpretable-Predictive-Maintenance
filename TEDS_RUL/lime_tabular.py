@@ -226,8 +226,9 @@ class LimeTabularExplainer(object):
         data_row_flt = data_row.flatten()
         data, inverse = self.__data_inverse(data_row_flt, num_samples)
         scaled_data = (data - self.scaler.mean_) / self.scaler.scale_
-        
+
         distances = sklearn.metrics.pairwise_distances(scaled_data,scaled_data[0].reshape(1, -1),metric=distance_metric).ravel()
+        distances = self.base.kernel_fn(distances)
         
         yss = predict_fn(inverse)
         
