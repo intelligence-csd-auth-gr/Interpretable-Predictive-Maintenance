@@ -26,7 +26,7 @@ class iPCA:
             neighbourhood, predictions, distances = self.neighbours_generator(instance,n_neighbours)
             neighbourhood = neighbourhood.reshape(inst_shape)
         else:
-            neighbourhood, predictions, distances = self.neighbours_generator(instance,self.predictor_function,n_neighbours)
+            neighbourhood, predictions, distances = self.neighbours_generator(instance,self.predictor_function)
             neighbourhood = neighbourhood.reshape(inst_shape)
 
         # Perform PCA per feature
@@ -49,8 +49,6 @@ class iPCA:
 
         # Train a Ridge Regression model with the transformed data
         rr = self._fit_linear_model(scaled_data, predictions, distances, model)
-#         rr = Ridge(alpha=0.001,random_state=0)
-#         rr.fit(scaled_data,predictions)
         
         # Obtaining the local prediction for the instance
         local_prediction = rr.predict(scaled_data[-1].reshape(1,-1)).squeeze()

@@ -43,6 +43,11 @@ class interactive_iml_tool:
         self.input_dim = (self.time_window, self.num_features)
         self.forecast_window = self.forecaster.output_shape[-2]
         
+        self.lionets_model =  Ridge(alpha=200,fit_intercept=True,random_state=0)
+        self.ipca_models = {}
+        self.ipca_models['LioNets'] = Ridge(alpha=0.5,fit_intercept=True,random_state=0)
+        self.ipca_models['Lime'] = Ridge(alpha=0.1,fit_intercept=True,random_state=0)    
+        
         temp_train = data.reshape(-1,self.num_features)
         self.global_mean, self.global_std = [],[]
         for i in range(self.num_features):
@@ -60,11 +65,11 @@ class interactive_iml_tool:
 
     def load_instance(self, instance):
         
+        # Examined instance
         self.instance = instance
-        model = Ridge(alpha=0.0001,fit_intercept=True,random_state=0)
         
         # Lionets weights
-        lionet_weights, real_prediction, local_prediction = self.lionet.explain_instance(self.instance,200,model)
+        lionet_weights, real_prediction, local_prediction = self.lionet.explain_instance(self.instance,3000,self.lionets_model)
         
         # Lime weights
         explanation, _, _, _ = self.lime.explain_instance(self.instance.flatten(), predict_fn = self._lime_predict, num_features=700)
@@ -75,7 +80,7 @@ class interactive_iml_tool:
         # iPCA
         pca_weights = {}
         for method in self.ipca.keys():
-            [timestep_weights, feature_weights], _ = self.ipca[method].find_importance(self.instance,300,model)
+            [timestep_weights, feature_weights], _ = self.ipca[method].find_importance(self.instance,3000,self.ipca_models[method])
             timestep_weights = timestep_weights.flatten()
             pca_weights[method] = [timestep_weights, feature_weights]
             
@@ -156,14 +161,13 @@ class interactive_iml_tool:
 
     def moded_instance_statistics(self, temp_instance, iml_method, enable_ipca):
         
-        model = Ridge(alpha=0.0001,fit_intercept=True,random_state=0)
-        
         if enable_ipca:
             real_prediction = self.predictor.predict(np.expand_dims(temp_instance,axis=0)).squeeze()
-            [timestep_weights, feature_weights], local_prediction  = self.ipca[iml_method].find_importance(temp_instance,300,model)
+            [timestep_weights, feature_weights], local_prediction  = \
+            self.ipca[iml_method].find_importance(temp_instance,300,self.ipca_models[iml_method])
             weights = timestep_weights.flatten()
         elif iml_method == 'LioNets':
-            weights, real_prediction, local_prediction = self.lionet.explain_instance(temp_instance,200,model)
+            weights, real_prediction, local_prediction = self.lionet.explain_instance(temp_instance,3000,self.lionets_model)
         else:
             real_prediction = self.predictor.predict(np.expand_dims(temp_instance,axis=0)).squeeze()
             explanation, _, _, _ = self.lime.explain_instance(temp_instance.flatten(), predict_fn = self._lime_predict, num_features=700)
